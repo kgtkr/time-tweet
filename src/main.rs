@@ -78,7 +78,7 @@ fn main() {
                 .long("test-time")
                 .alias("tt")
                 .takes_value(true)
-                .default_value("30"),
+                .default_value("10"),
         );
 
     let matches = app.get_matches();
