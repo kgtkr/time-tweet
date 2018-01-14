@@ -58,7 +58,7 @@ fn main() {
         .arg(
             Arg::with_name("hour")
                 .help("時")
-                .long("#![feature(i128_type)]hour")
+                .long("hour")
                 .short("H")
                 .takes_value(true)
                 .required(true),
