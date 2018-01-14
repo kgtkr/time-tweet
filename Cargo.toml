@@ -1,0 +1,11 @@
+[package]
+name = "time-tweet"
+version = "0.1.0"
+authors = ["kgtkr <kgtkr.jp@gmail.com>"]
+
+[dependencies]
+egg-mode = "0.12.0"
+clap = "2.29"
+tokio-core = "0.1"
+futures = "0.1.14"
+chrono = "0.4"
