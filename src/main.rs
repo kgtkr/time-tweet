@@ -9,7 +9,7 @@ use clap::{App, Arg};
 use tokio_core::reactor::Core;
 use chrono::prelude::*;
 use chrono::Duration;
-use std::{thread, time};
+use std::thread;
 
 fn main() {
     let app = App::new("time-tweet")
