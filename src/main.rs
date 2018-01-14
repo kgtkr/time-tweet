@@ -2,7 +2,10 @@ extern crate chrono;
 #[macro_use]
 extern crate clap;
 extern crate egg_mode;
+extern crate env_logger;
 extern crate futures;
+#[macro_use]
+extern crate log;
 extern crate tokio_core;
 
 use clap::{App, Arg};
@@ -12,6 +15,8 @@ use chrono::Duration;
 use std::thread;
 
 fn main() {
+    env_logger::init();
+
     let app = App::new("time-tweet")
         .version("0.1.0")
         .author("tkr <kgtkr.jp@gmail.com>")
@@ -113,7 +118,7 @@ fn main() {
 
         date.signed_duration_since(test_tweet_date)
     };
-    println!("diff:{}", diff);
+    info!("diff:{}", diff);
 
     thread::sleep(
         (tweet_date.signed_duration_since(Utc::now()) - diff)
@@ -122,7 +127,7 @@ fn main() {
     );
 
     let date = tweet(msg, &token);
-    println!(
+    info!(
         "本番:{}",
         date.with_timezone(&Local)
             .format("%Y-%m-%d %H:%M:%S.%f")
