@@ -1,6 +1,5 @@
-#![feature(i128_type)]
-
 extern crate chrono;
+#[macro_use]
 extern crate clap;
 extern crate egg_mode;
 extern crate futures;
@@ -80,8 +79,8 @@ fn main() {
     let ts = matches.value_of("token_secret").unwrap();
     let msg = matches.value_of("msg").unwrap();
     let tweet_date = {
-        let hour = matches.value_of("hour").unwrap().parse::<u32>().unwrap();
-        let minute = matches.value_of("minute").unwrap().parse::<u32>().unwrap();
+        let hour = value_t!(matches, "hour", u32).unwrap_or_else(|e| e.exit());
+        let minute = value_t!(matches, "minute", u32).unwrap_or_else(|e| e.exit());
         Local::today().and_hms(hour, minute, 0).with_timezone(&Utc)
     };
 
