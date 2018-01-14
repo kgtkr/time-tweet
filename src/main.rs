@@ -1,3 +1,5 @@
+#![feature(i128_type)]
+
 extern crate chrono;
 extern crate clap;
 extern crate egg_mode;
@@ -57,7 +59,7 @@ fn main() {
         .arg(
             Arg::with_name("hour")
                 .help("時")
-                .long("hour")
+                .long("#![feature(i128_type)]hour")
                 .short("H")
                 .takes_value(true)
                 .required(true),
@@ -112,10 +114,17 @@ fn main() {
 fn tweet(msg: &str, token: &egg_mode::Token) -> DateTime<Utc> {
     let mut core = Core::new().unwrap();
     let handle = core.handle();
-    core.run(egg_mode::tweet::DraftTweet::new(msg).send(token, &handle))
-        .unwrap()
-        .response
-        .created_at
+    tweet_id_to_date(
+        core.run(egg_mode::tweet::DraftTweet::new(msg).send(token, &handle))
+            .unwrap()
+            .response
+            .id,
+    )
+}
+
+fn tweet_id_to_date(id: u64) -> DateTime<Utc> {
+    let ms = ((id >> 22) + 1288834974657) as i64;
+    Utc.timestamp(ms / 1000, ((ms % 1000) * 1000000) as u32)
 }
 
 fn timestamp_millis(date: &DateTime<Utc>) -> i64 {
