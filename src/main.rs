@@ -1,19 +1,20 @@
 extern crate chrono;
 #[macro_use]
 extern crate clap;
+extern crate cron;
 extern crate egg_mode;
 extern crate env_logger;
 extern crate futures;
 #[macro_use]
 extern crate log;
 extern crate tokio_core;
-
 use clap::{App, Arg};
 use tokio_core::reactor::Core;
 use chrono::prelude::*;
 use chrono::Duration;
 use std::thread;
-
+use cron::Schedule;
+use std::str::FromStr;
 fn main() {
     env_logger::init();
 
@@ -59,21 +60,13 @@ fn main() {
                 .long("msg")
                 .short("m")
                 .takes_value(true)
-                .required(true),
+                .default_value("${H}${M}"),
         )
         .arg(
-            Arg::with_name("hour")
-                .help("時")
-                .long("hour")
-                .short("H")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("minute")
-                .help("分")
-                .long("minute")
-                .short("M")
+            Arg::with_name("time")
+                .help("ツイート時間。cronを指定(秒と年の拡張あり)")
+                .long("time")
+                .short("t")
                 .takes_value(true)
                 .required(true),
         )
@@ -93,8 +86,7 @@ fn main() {
     let tk = matches.value_of("token_key").unwrap();
     let ts = matches.value_of("token_secret").unwrap();
     let msg = matches.value_of("msg").unwrap();
-    let hour = value_t!(matches, "hour", u32).unwrap_or_else(|e| e.exit());
-    let minute = value_t!(matches, "minute", u32).unwrap_or_else(|e| e.exit());
+    let time = Schedule::from_str(matches.value_of("time").unwrap()).unwrap();
     let test_time = value_t!(matches, "test_time", u32).unwrap_or_else(|e| e.exit());
 
     let token = egg_mode::Token::Access {
@@ -102,37 +94,42 @@ fn main() {
         access: egg_mode::KeyPair::new(tk.to_string(), ts.to_string()),
     };
 
-    let tweet_date = Local::today().and_hms(hour, minute, 0).with_timezone(&Utc);
-    let test_tweet_date = tweet_date
-        .checked_sub_signed(Duration::seconds(test_time as i64))
-        .unwrap();
+    for tweet_date_local in time.upcoming(Local) {
+        let tweet_date = tweet_date_local.with_timezone(&Utc);
+        let msg = msg.replace("${H}", &format!("{:>02}", tweet_date_local.hour()));
+        let msg = msg.replace("${M}", &format!("{:>02}", tweet_date_local.minute()));
 
-    let diff = {
+        let test_tweet_date = tweet_date
+            .checked_sub_signed(Duration::seconds(test_time as i64))
+            .unwrap();
+
+        let diff = {
+            thread::sleep(
+                test_tweet_date
+                    .signed_duration_since(Utc::now())
+                    .to_std()
+                    .unwrap(),
+            );
+            let date = tweet(&test_tweet_date.with_timezone(&Local).to_string(), &token);
+
+            date.signed_duration_since(test_tweet_date)
+        };
+        info!("diff:{}", diff);
+
         thread::sleep(
-            test_tweet_date
-                .signed_duration_since(Utc::now())
+            (tweet_date.signed_duration_since(Utc::now()) - diff)
                 .to_std()
                 .unwrap(),
         );
-        let date = tweet(&test_tweet_date.with_timezone(&Local).to_string(), &token);
 
-        date.signed_duration_since(test_tweet_date)
-    };
-    info!("diff:{}", diff);
-
-    thread::sleep(
-        (tweet_date.signed_duration_since(Utc::now()) - diff)
-            .to_std()
-            .unwrap(),
-    );
-
-    let date = tweet(msg, &token);
-    info!(
-        "本番:{}",
-        date.with_timezone(&Local)
-            .format("%Y-%m-%d %H:%M:%S.%f")
-            .to_string()
-    );
+        let date = tweet(&msg, &token);
+        info!(
+            "本番:{}",
+            date.with_timezone(&Local)
+                .format("%Y-%m-%d %H:%M:%S.%f")
+                .to_string()
+        );
+    }
 }
 
 fn tweet(msg: &str, token: &egg_mode::Token) -> DateTime<Utc> {
