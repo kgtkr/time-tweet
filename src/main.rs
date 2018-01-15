@@ -4,9 +4,6 @@ extern crate clap;
 extern crate cron;
 extern crate egg_mode;
 extern crate futures;
-extern crate log4rs;
-#[macro_use]
-extern crate log;
 extern crate tokio_core;
 use clap::{App, Arg};
 use tokio_core::reactor::Core;
@@ -15,12 +12,6 @@ use chrono::Duration;
 use std::thread;
 use cron::Schedule;
 fn main() {
-    log4rs::init_config(
-        log4rs::config::Config::builder()
-            .build(log4rs::config::Root::builder().build(log::LevelFilter::Info))
-            .unwrap(),
-    ).unwrap();
-
     let app = App::new("time-tweet")
         .version("0.1.0")
         .author("tkr <kgtkr.jp@gmail.com>")
@@ -118,7 +109,7 @@ fn main() {
                 })
                 .map(|date| date.signed_duration_since(test_tweet_date))
         }.and_then(|diff| {
-            info!("diff:{}", diff);
+            println!("diff:{}", diff);
             tweet_date
                 .signed_duration_since(Utc::now() - diff)
                 .to_std()
@@ -128,7 +119,7 @@ fn main() {
                     tweet(&msg, &token)
                         .map_err(|_| "ツイートに失敗")
                         .map(|date| {
-                            info!(
+                            println!(
                                 "本番:{}",
                                 date.with_timezone(&Local)
                                     .format("%Y-%m-%d %H:%M:%S.%f")
@@ -139,7 +130,7 @@ fn main() {
         });
 
         if let Err(msg) = result {
-            error!("{}", msg);
+            eprintln!("{}", msg);
         }
     }
 }
