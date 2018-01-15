@@ -86,7 +86,7 @@ fn main() {
     let tk = matches.value_of("token_key").unwrap();
     let ts = matches.value_of("token_secret").unwrap();
     let msg = matches.value_of("msg").unwrap();
-    let time = Schedule::from_str(matches.value_of("time").unwrap()).unwrap();
+    let time = value_t!(matches, "time", Schedule).unwrap_or_else(|e| e.exit());
     let test_time = value_t!(matches, "test_time", u32).unwrap_or_else(|e| e.exit());
 
     let token = egg_mode::Token::Access {
