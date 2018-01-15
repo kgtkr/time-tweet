@@ -3,8 +3,8 @@ extern crate chrono;
 extern crate clap;
 extern crate cron;
 extern crate egg_mode;
-extern crate env_logger;
 extern crate futures;
+extern crate log4rs;
 #[macro_use]
 extern crate log;
 extern crate tokio_core;
@@ -14,9 +14,12 @@ use chrono::prelude::*;
 use chrono::Duration;
 use std::thread;
 use cron::Schedule;
-use std::str::FromStr;
 fn main() {
-    env_logger::init();
+    log4rs::init_config(
+        log4rs::config::Config::builder()
+            .build(log4rs::config::Root::builder().build(log::LevelFilter::Info))
+            .unwrap(),
+    ).unwrap();
 
     let app = App::new("time-tweet")
         .version("0.1.0")
@@ -103,44 +106,49 @@ fn main() {
             .checked_sub_signed(Duration::seconds(test_time as i64))
             .unwrap();
 
-        let diff = {
-            thread::sleep(
-                test_tweet_date
-                    .signed_duration_since(Utc::now())
-                    .to_std()
-                    .unwrap(),
-            );
-            let date = tweet(&test_tweet_date.with_timezone(&Local).to_string(), &token);
-
-            date.signed_duration_since(test_tweet_date)
-        };
-        info!("diff:{}", diff);
-
-        thread::sleep(
-            (tweet_date.signed_duration_since(Utc::now()) - diff)
+        let result = {
+            test_tweet_date
+                .signed_duration_since(Utc::now())
                 .to_std()
-                .unwrap(),
-        );
+                .map_err(|_| "既に過ぎている")
+                .and_then(|wait| {
+                    thread::sleep(wait);
+                    tweet(&test_tweet_date.with_timezone(&Local).to_string(), &token)
+                        .map_err(|_| "ツイートに失敗")
+                })
+                .map(|date| date.signed_duration_since(test_tweet_date))
+        }.and_then(|diff| {
+            info!("diff:{}", diff);
+            tweet_date
+                .signed_duration_since(Utc::now() - diff)
+                .to_std()
+                .map_err(|_| "既に過ぎている")
+                .and_then(|wait| {
+                    thread::sleep(wait);
+                    tweet(&msg, &token)
+                        .map_err(|_| "ツイートに失敗")
+                        .map(|date| {
+                            info!(
+                                "本番:{}",
+                                date.with_timezone(&Local)
+                                    .format("%Y-%m-%d %H:%M:%S.%f")
+                                    .to_string()
+                            );
+                        })
+                })
+        });
 
-        let date = tweet(&msg, &token);
-        info!(
-            "本番:{}",
-            date.with_timezone(&Local)
-                .format("%Y-%m-%d %H:%M:%S.%f")
-                .to_string()
-        );
+        if let Err(msg) = result {
+            error!("{}", msg);
+        }
     }
 }
 
-fn tweet(msg: &str, token: &egg_mode::Token) -> DateTime<Utc> {
+fn tweet(msg: &str, token: &egg_mode::Token) -> Result<DateTime<Utc>, egg_mode::error::Error> {
     let mut core = Core::new().unwrap();
     let handle = core.handle();
-    tweet_id_to_date(
-        core.run(egg_mode::tweet::DraftTweet::new(msg).send(token, &handle))
-            .unwrap()
-            .response
-            .id,
-    )
+    core.run(egg_mode::tweet::DraftTweet::new(msg).send(token, &handle))
+        .map(|res| tweet_id_to_date(res.response.id))
 }
 
 fn tweet_id_to_date(id: u64) -> DateTime<Utc> {
