@@ -2,6 +2,6 @@
 正確な時間にツイート
 
 ```sh
-$ cargo install --git https://github.com/kgtkr/time-tweet.git
+$ cargo install time-tweet
 $ time-tweet -h
 ```
