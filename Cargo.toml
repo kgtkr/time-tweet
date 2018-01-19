@@ -1,6 +1,6 @@
 [package]
 name = "time-tweet"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["kgtkr <kgtkr.jp@gmail.com>"]
 
 license = "AGPL-3.0"
@@ -15,4 +15,4 @@ clap = "2.29"
 tokio-core = "0.1"
 futures = "0.1.14"
 chrono = "0.4"
-cron = { path = "./cron",version="0.4.0" }
+cron-bugfix-version = "0.4.0"

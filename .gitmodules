@@ -1,3 +1,0 @@
-[submodule "cron"]
-	path = cron
-	url = https://github.com/tirr-c/cron
