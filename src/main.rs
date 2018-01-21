@@ -13,7 +13,7 @@ use std::thread;
 use cron::Schedule;
 fn main() {
     let app = App::new("time-tweet")
-        .version("0.1.2")
+        .version(env!("CARGO_PKG_VERSION"))
         .author("tkr <kgtkr.jp@gmail.com>")
         .about("正確な時間にツイート")
         .arg(
