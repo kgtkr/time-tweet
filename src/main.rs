@@ -91,7 +91,7 @@ fn main() {
     for tweet_date_local in time.upcoming(Local) {
         println!("Next:{}", tweet_date_local);
         let tweet_date = tweet_date_local.with_timezone(&Utc);
-        let msg = msg.replace("${H}", &format!("{:>02}", tweet_date_local.hour()));
+        let msg = msg.replace("${H}", &tweet_date_local.hour().to_string());
         let msg = msg.replace("${M}", &format!("{:>02}", tweet_date_local.minute()));
 
         let test_tweet_date = tweet_date
