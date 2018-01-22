@@ -91,23 +91,12 @@ fn main() {
         access: egg_mode::KeyPair::new(tk.to_string(), ts.to_string()),
     };
 
-    let mut times_iter = times
+    for tweet_date_local in times
         .iter()
         .map(|time| time.upcoming(Local))
         .collect::<Vec<_>>()
-        .merge_sort(false);
-
-    println!(
-        "List:\n{}",
-        times_iter
-            .by_ref()
-            .map(|x| x.to_string())
-            .take(10)
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-
-    for tweet_date_local in times_iter {
+        .merge_sort(false)
+    {
         println!("Next:{}", tweet_date_local);
         let tweet_date = tweet_date_local.with_timezone(&Utc);
         let msg = msg.replace("${H}", &tweet_date_local.hour().to_string());
@@ -124,8 +113,11 @@ fn main() {
                 .map_err(|_| "既に過ぎている")
                 .and_then(|wait| {
                     thread::sleep(wait);
-                    tweet(&test_tweet_date.with_timezone(&Local).to_string(), &token)
-                        .map_err(|_| "ツイートに失敗")
+                    tweet(
+                        &test_tweet_date.with_timezone(&Local).to_string(),
+                        &token,
+                        true,
+                    ).map_err(|_| "ツイートに失敗")
                 })
                 .map(|date| date.signed_duration_since(test_tweet_date))
         }.and_then(|diff| {
@@ -136,7 +128,7 @@ fn main() {
                 .map_err(|_| "既に過ぎている")
                 .and_then(|wait| {
                     thread::sleep(wait);
-                    tweet(&msg, &token)
+                    tweet(&msg, &token, false)
                         .map_err(|_| "ツイートに失敗")
                         .map(|date| {
                             println!(
@@ -155,11 +147,18 @@ fn main() {
     }
 }
 
-fn tweet(msg: &str, token: &egg_mode::Token) -> Result<DateTime<Utc>, egg_mode::error::Error> {
+fn tweet(
+    msg: &str,
+    token: &egg_mode::Token,
+    remove: bool,
+) -> Result<DateTime<Utc>, egg_mode::error::Error> {
     let mut core = Core::new().unwrap();
     let handle = core.handle();
-    core.run(egg_mode::tweet::DraftTweet::new(msg).send(token, &handle))
-        .map(|res| tweet_id_to_date(res.response.id))
+    let res = core.run(egg_mode::tweet::DraftTweet::new(msg).send(token, &handle))?;
+    if remove {
+        core.run(egg_mode::tweet::delete(res.response.id, token, &handle))?;
+    }
+    Ok(tweet_id_to_date(res.response.id))
 }
 
 fn tweet_id_to_date(id: u64) -> DateTime<Utc> {
