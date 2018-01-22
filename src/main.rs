@@ -4,6 +4,7 @@ extern crate clap;
 extern crate cron;
 extern crate egg_mode;
 extern crate futures;
+extern crate iter_merge_sort;
 extern crate tokio_core;
 use clap::{App, Arg};
 use tokio_core::reactor::Core;
@@ -11,6 +12,7 @@ use chrono::prelude::*;
 use chrono::Duration;
 use std::thread;
 use cron::Schedule;
+use iter_merge_sort::*;
 fn main() {
     let app = App::new("time-tweet")
         .version(env!("CARGO_PKG_VERSION"))
@@ -57,12 +59,13 @@ fn main() {
                 .default_value("${H}${M}"),
         )
         .arg(
-            Arg::with_name("time")
+            Arg::with_name("times")
                 .help("ツイート時間。cronを指定(秒と年の拡張あり)")
-                .long("time")
+                .long("times")
                 .short("t")
                 .takes_value(true)
-                .required(true),
+                .required(true)
+                .multiple(true),
         )
         .arg(
             Arg::with_name("test_time")
@@ -80,7 +83,7 @@ fn main() {
     let tk = matches.value_of("token_key").unwrap();
     let ts = matches.value_of("token_secret").unwrap();
     let msg = matches.value_of("msg").unwrap();
-    let time = value_t!(matches, "time", Schedule).unwrap_or_else(|e| e.exit());
+    let times = values_t!(matches, "times", Schedule).unwrap_or_else(|e| e.exit());
     let test_time = value_t!(matches, "test_time", u32).unwrap_or_else(|e| e.exit());
 
     let token = egg_mode::Token::Access {
@@ -88,7 +91,23 @@ fn main() {
         access: egg_mode::KeyPair::new(tk.to_string(), ts.to_string()),
     };
 
-    for tweet_date_local in time.upcoming(Local) {
+    let mut times_iter = times
+        .iter()
+        .map(|time| time.upcoming(Local))
+        .collect::<Vec<_>>()
+        .merge_sort(false);
+
+    println!(
+        "List:\n{}",
+        times_iter
+            .by_ref()
+            .map(|x| x.to_string())
+            .take(10)
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+
+    for tweet_date_local in times_iter {
         println!("Next:{}", tweet_date_local);
         let tweet_date = tweet_date_local.with_timezone(&Utc);
         let msg = msg.replace("${H}", &tweet_date_local.hour().to_string());
