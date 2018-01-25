@@ -112,16 +112,21 @@ fn main() {
             .checked_sub_signed(Duration::seconds(test_time as i64))
             .unwrap();
 
+        println!("【テスト】");
         let result = time_tweet(
             &test_tweet_date.with_timezone(&Local).to_string(),
             &token,
             true,
             &test_tweet_date,
-        ).and_then(|diff| {
-            println!("テストdiff:{}ms", diff.num_milliseconds());
-            time_tweet(&msg, &token, false, &(tweet_date - diff))
-        })
-            .map(|diff| println!("本番diff:{}ms", diff.num_milliseconds()));
+        ).map(|date| date.signed_duration_since(test_tweet_date))
+            .and_then(|diff| {
+                println!("【本番】");
+                time_tweet(&msg, &token, false, &(tweet_date - diff))
+            })
+            .map(|date| {
+                println!("【リザルト】");
+                time_log(&tweet_date, &date)
+            });
 
         if let Err(err) = result {
             match err {
@@ -148,16 +153,25 @@ mod time_tweet_error {
     }
 }
 
+fn time_log(tweet_date: &DateTime<Utc>, date: &DateTime<Utc>) {
+    let format = "%Y-%m-%d %H:%M:%S%.3f";
+    println!("予定:{}", tweet_date.format(format));
+    println!("実際:{}", date.format(format));
+    let diff = date.signed_duration_since(tweet_date.clone());
+    println!("Diff:{}ms", diff.num_milliseconds());
+}
+
 fn time_tweet(
     msg: &str,
     token: &egg_mode::Token,
     remove: bool,
     tweet_date: &DateTime<Utc>,
-) -> time_tweet_error::Result<Duration> {
+) -> time_tweet_error::Result<DateTime<Utc>> {
     let wait = tweet_date.signed_duration_since(Utc::now()).to_std()?;
     thread::sleep(wait);
     let date = tweet(msg, &token, remove)?;
-    Ok(date.signed_duration_since(tweet_date.clone()))
+    time_log(tweet_date, &date);
+    Ok(date)
 }
 
 fn tweet(
