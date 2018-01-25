@@ -1,3 +1,5 @@
+#![recursion_limit = "1024"]
+
 extern crate chrono;
 #[macro_use]
 extern crate clap;
@@ -5,6 +7,7 @@ extern crate cron;
 extern crate egg_mode;
 extern crate futures;
 extern crate iter_merge_sort;
+extern crate time;
 extern crate tokio_core;
 use clap::{App, Arg};
 use tokio_core::reactor::Core;
@@ -13,6 +16,9 @@ use chrono::Duration;
 use std::thread;
 use cron::Schedule;
 use iter_merge_sort::*;
+#[macro_use]
+extern crate error_chain;
+
 fn main() {
     let app = App::new("time-tweet")
         .version(env!("CARGO_PKG_VERSION"))
@@ -106,45 +112,52 @@ fn main() {
             .checked_sub_signed(Duration::seconds(test_time as i64))
             .unwrap();
 
-        let result = {
-            test_tweet_date
-                .signed_duration_since(Utc::now())
-                .to_std()
-                .map_err(|_| "既に過ぎている")
-                .and_then(|wait| {
-                    thread::sleep(wait);
-                    tweet(
-                        &test_tweet_date.with_timezone(&Local).to_string(),
-                        &token,
-                        true,
-                    ).map_err(|_| "ツイートに失敗")
-                })
-                .map(|date| date.signed_duration_since(test_tweet_date))
-        }.and_then(|diff| {
-            println!("diff:{}", diff);
-            tweet_date
-                .signed_duration_since(Utc::now() - diff)
-                .to_std()
-                .map_err(|_| "既に過ぎている")
-                .and_then(|wait| {
-                    thread::sleep(wait);
-                    tweet(&msg, &token, false)
-                        .map_err(|_| "ツイートに失敗")
-                        .map(|date| {
-                            println!(
-                                "本番:{}",
-                                date.with_timezone(&Local)
-                                    .format("%Y-%m-%d %H:%M:%S.%f")
-                                    .to_string()
-                            );
-                        })
-                })
-        });
+        let result = time_tweet(
+            &test_tweet_date.with_timezone(&Local).to_string(),
+            &token,
+            true,
+            &test_tweet_date,
+        ).and_then(|diff| {
+            println!("テストdiff:{}", diff.num_milliseconds());
+            time_tweet(&msg, &token, false, &(tweet_date - diff))
+        })
+            .map(|diff| println!("本番diff:{}", diff.num_milliseconds()));
 
-        if let Err(msg) = result {
-            eprintln!("{}", msg);
+        if let Err(err) = result {
+            match err {
+                time_tweet_error::Error(time_tweet_error::ErrorKind::TwitterError(err), _) => {
+                    eprintln!("ツイートエラー:{}", err)
+                }
+
+                time_tweet_error::Error(time_tweet_error::ErrorKind::LateDateError(_), _) => {
+                    eprintln!("既に過ぎています")
+                }
+
+                _ => eprintln!("何らかのエラー"),
+            }
         }
     }
+}
+
+mod time_tweet_error {
+    error_chain! {
+        foreign_links {
+            TwitterError(::egg_mode::error::Error);
+            LateDateError(::time::OutOfRangeError);
+        }
+    }
+}
+
+fn time_tweet(
+    msg: &str,
+    token: &egg_mode::Token,
+    remove: bool,
+    tweet_date: &DateTime<Utc>,
+) -> time_tweet_error::Result<Duration> {
+    let wait = tweet_date.signed_duration_since(Utc::now()).to_std()?;
+    thread::sleep(wait);
+    let date = tweet(msg, &token, remove)?;
+    Ok(date.signed_duration_since(tweet_date.clone()))
 }
 
 fn tweet(
@@ -163,5 +176,5 @@ fn tweet(
 
 fn tweet_id_to_date(id: u64) -> DateTime<Utc> {
     let ms = ((id >> 22) + 1288834974657) as i64;
-    Utc.timestamp(ms / 1000, ((ms % 1000) * 1000000) as u32)
+    Utc.timestamp(ms / 1000, ((ms % 1000) * 1_000_000) as u32)
 }
