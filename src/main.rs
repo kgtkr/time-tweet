@@ -118,10 +118,10 @@ fn main() {
             true,
             &test_tweet_date,
         ).and_then(|diff| {
-            println!("テストdiff:{}", diff.num_milliseconds());
+            println!("テストdiff:{}ms", diff.num_milliseconds());
             time_tweet(&msg, &token, false, &(tweet_date - diff))
         })
-            .map(|diff| println!("本番diff:{}", diff.num_milliseconds()));
+            .map(|diff| println!("本番diff:{}ms", diff.num_milliseconds()));
 
         if let Err(err) = result {
             match err {
