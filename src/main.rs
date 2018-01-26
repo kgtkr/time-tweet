@@ -154,6 +154,8 @@ mod time_tweet_error {
 }
 
 fn time_log(tweet_date: &DateTime<Utc>, date: &DateTime<Utc>) {
+    let tweet_date = tweet_date.with_timezone(&Local);
+    let date = date.with_timezone(&Local);
     let format = "%Y-%m-%d %H:%M:%S%.3f";
     println!("予定:{}", tweet_date.format(format));
     println!("実際:{}", date.format(format));

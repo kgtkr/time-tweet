@@ -741,7 +741,7 @@ dependencies = [
 
 [[package]]
 name = "time-tweet"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "chrono 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.29.1 (registry+https://github.com/rust-lang/crates.io-index)",
