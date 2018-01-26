@@ -19,6 +19,8 @@ use iter_merge_sort::*;
 #[macro_use]
 extern crate error_chain;
 
+const format: &str = "%Y-%m-%d %H:%M:%S%.3f";
+
 fn main() {
     let app = App::new("time-tweet")
         .version(env!("CARGO_PKG_VERSION"))
@@ -123,9 +125,19 @@ fn main() {
                 println!("【本番】");
                 time_tweet(&msg, &token, false, &(tweet_date - diff))
             })
-            .map(|date| {
+            .and_then(|date| {
                 println!("【リザルト】");
-                time_log(&tweet_date, &date)
+                time_log(&tweet_date, &date);
+                tweet(
+                    format!(
+                        "{} {}ms",
+                        tweet_date.with_timezone(&Local).format(format),
+                        date.signed_duration_since(tweet_date.clone())
+                            .num_milliseconds()
+                    ),
+                    &token,
+                    false,
+                ).map_err(|e| time_tweet_error::Error::from(e))
             });
 
         if let Err(err) = result {
@@ -156,7 +168,6 @@ mod time_tweet_error {
 fn time_log(tweet_date: &DateTime<Utc>, date: &DateTime<Utc>) {
     let tweet_date = tweet_date.with_timezone(&Local);
     let date = date.with_timezone(&Local);
-    let format = "%Y-%m-%d %H:%M:%S%.3f";
     println!("予定:{}", tweet_date.format(format));
     println!("実際:{}", date.format(format));
     let diff = date.signed_duration_since(tweet_date.clone());
