@@ -131,7 +131,7 @@ fn main() {
                 tweet(
                     &format!(
                         "{} {}ms",
-                        tweet_date.with_timezone(&Local).format(FORMAT),
+                        date.with_timezone(&Local).format(FORMAT),
                         date.signed_duration_since(tweet_date.clone())
                             .num_milliseconds()
                     ),
