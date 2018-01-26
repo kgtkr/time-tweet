@@ -19,7 +19,7 @@ use iter_merge_sort::*;
 #[macro_use]
 extern crate error_chain;
 
-const format: &str = "%Y-%m-%d %H:%M:%S%.3f";
+const FORMAT: &str = "%Y-%m-%d %H:%M:%S%.3f";
 
 fn main() {
     let app = App::new("time-tweet")
@@ -129,9 +129,9 @@ fn main() {
                 println!("【リザルト】");
                 time_log(&tweet_date, &date);
                 tweet(
-                    format!(
+                    &format!(
                         "{} {}ms",
-                        tweet_date.with_timezone(&Local).format(format),
+                        tweet_date.with_timezone(&Local).format(FORMAT),
                         date.signed_duration_since(tweet_date.clone())
                             .num_milliseconds()
                     ),
@@ -168,8 +168,8 @@ mod time_tweet_error {
 fn time_log(tweet_date: &DateTime<Utc>, date: &DateTime<Utc>) {
     let tweet_date = tweet_date.with_timezone(&Local);
     let date = date.with_timezone(&Local);
-    println!("予定:{}", tweet_date.format(format));
-    println!("実際:{}", date.format(format));
+    println!("予定:{}", tweet_date.format(FORMAT));
+    println!("実際:{}", date.format(FORMAT));
     let diff = date.signed_duration_since(tweet_date.clone());
     println!("Diff:{}ms", diff.num_milliseconds());
 }
