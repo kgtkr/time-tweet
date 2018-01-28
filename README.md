@@ -12,3 +12,5 @@ $ time-tweet -h
 |https://twitter.com/kgtkr/status/956596026206334976|2018-01-26 03:33.59.999|-1ms|
 |https://twitter.com/kgtkr/status/956793829574635520|2018-01-26 16:39.59.997|-3ms|
 |https://twitter.com/kgtkr/status/957320801946025984|2018-01-28 03:34:00.001|+1ms|
+|https://twitter.com/kgtkr/status/957471545219166208|2018-01-28 13:32:59.998|-2ms|
+|https://twitter.com/kgtkr/status/957518605310050304|2018-01-28 16:39:59.998|-2ms|
