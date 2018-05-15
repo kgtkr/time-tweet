@@ -110,17 +110,30 @@ fn main() {
         let msg = msg.replace("${H}", &tweet_date_local.hour().to_string());
         let msg = msg.replace("${M}", &format!("{:>02}", tweet_date_local.minute()));
 
+        let pre_test_tweet_date = tweet_date
+            .checked_sub_signed(Duration::seconds((test_time * 2) as i64))
+            .unwrap();
+
         let test_tweet_date = tweet_date
             .checked_sub_signed(Duration::seconds(test_time as i64))
             .unwrap();
 
-        println!("【テスト】");
+        println!("【プレテスト】");
         let result = time_tweet(
-            &test_tweet_date.with_timezone(&Local).to_string(),
+            &pre_test_tweet_date.with_timezone(&Local).to_string(),
             &token,
             true,
-            &test_tweet_date,
-        ).map(|date| date.signed_duration_since(test_tweet_date))
+            &pre_test_tweet_date,
+        ).and_then(|_| {
+            println!("【テスト】");
+            time_tweet(
+                &test_tweet_date.with_timezone(&Local).to_string(),
+                &token,
+                true,
+                &test_tweet_date,
+            )
+        })
+            .map(|date| date.signed_duration_since(test_tweet_date))
             .and_then(|diff| {
                 println!("【本番】");
                 time_tweet(&msg, &token, false, &(tweet_date - diff))
